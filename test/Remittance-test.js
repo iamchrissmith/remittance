@@ -19,15 +19,8 @@ contract('Remittance', (accounts) => {
       });
   });
 
-  it('should start with a balance of 0', () => {
-    return contract.balance({from:alice})
-      .then( (balance) => {
-        assert.equal( balance.toString(10), 0, "Intial Balance is not Zero");
-      });
-  });
-
-  context('when Alice sends funds with an amount, recipient and two passwords', () => {
-    xit('it should increase the balance', () => {});
+  context('when Alice sends a Remittance with an amount, recipient and combined password', () => {
+    xit('it should create a Remittance record with the balance and exchange address', () => {});
     xit('it should store the passwords as secure hashes', () => {});
   });
 
