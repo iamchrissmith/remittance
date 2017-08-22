@@ -1,4 +1,6 @@
 const Remittance = artifacts.require('./Remittance.sol');
+web3.eth.getTransactionReceiptMined = require("./getTransactionReceiptMined.js");
+const expectedExceptionPromise = require('./expected_exception_testRPC_and_geth.js');
 
 contract('Remittance', (accounts) => {
   const alice = accounts[0],
@@ -42,10 +44,9 @@ contract('Remittance', (accounts) => {
         });
     });
     it('only the contract owner can createRemittance()', () => {
-      return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: carol, value:10})
-        .then( (txn) => {
-          assert.isFalse(txn, "Should not allow non-owners to createRemittance");
-        });
+      return expectedExceptionPromise(function () {
+        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: carol, value:10});
+          }, 3000000);
     });
     xit('once a remittance is created for an address it cannot create another', () => {});
 
