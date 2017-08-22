@@ -66,13 +66,15 @@ contract('Remittance', (accounts) => {
           });
       });
       it('it should send the funds when both of the passwords are correct', () => {
-        const exchangeBalance = web3.eth.getBalance(exchange);
-        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: owner, value:10})
+        const freshExchange = accounts[2];
+        const exchangeBalance = web3.eth.getBalance(freshExchange);
+        const amount = web3.toWei(1, 'ether'); //1000000000000000000
+        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, freshExchange, 10, {from: owner, value:amount})
           .then( (txn) => {
-            return contract.sendRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, {from: exchange})
-              .then( (txn) => {
-                newBalance = web3.eth.getBalance(exchange);
-                assert.equal(exchangeBalance.plus(10), newBalance, "Exchange balance did not increase by 10");
+            return contract.sendRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, {from: freshExchange, gasPrice:1})
+              .then( (sendTxn) => {
+                newBalance = web3.eth.getBalance(freshExchange);
+                assert.equal(exchangeBalance.plus(amount).minus(sendTxn.receipt.gasUsed).toString(10), newBalance.toString(10), "Exchange balance did not increase by 10");
               })
           });
       });

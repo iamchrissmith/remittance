@@ -45,8 +45,10 @@ contract Remittance {
     if(remitTransactions[msg.sender].amount == 0) revert();
     if(block.number > remitTransactions[msg.sender].deadline) revert();
     if(remitTransactions[msg.sender].combinedPassword != keccak256(pwHash1, pwHash2)) revert();
+    uint toSend = remitTransactions[msg.sender].amount;
+    remitTransactions[msg.sender].amount = 0;
 
-    if(!msg.sender.send(remitTransactions[msg.sender].amount)) revert();
+    msg.sender.transfer(toSend);
     return true;
   }
 }
