@@ -48,7 +48,14 @@ contract('Remittance', (accounts) => {
         return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: carol, value:10});
           }, 3000000);
     });
-    xit('once a remittance is created for an address it cannot create another', () => {});
+    it('once a remittance is created for an address it cannot create another', () => {
+      return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: alice, value:10})
+        .then( (txn) => {
+          return expectedExceptionPromise(function () {
+            return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: carol, value:10});
+              }, 3000000);
+        });
+    });
 
     describe('.retreiveFunds()', () => {
       xit('it should not send the funds when one of the passwords is wrong', () => {});
