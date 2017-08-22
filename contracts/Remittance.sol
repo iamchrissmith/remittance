@@ -36,4 +36,17 @@ contract Remittance {
     remitTransactions[exchange] = newRemit;
     return true;
   }
+
+  function sendRemittance(bytes32 pwHash1, bytes32 pwHash2)
+    public
+    payable
+    returns (bool success)
+  {
+    if(remitTransactions[msg.sender].amount != 0) revert();
+    if(remitTransactions[msg.sender].deadline < block.number ) revert();
+    if(remitTransactions[msg.sender].combinedPassword != keccak256(pwHash1, pwHash2)) revert();
+
+    if(!msg.sender.send(remitTransactions[msg.sender].amount)) revert();
+    return true;
+  }
 }

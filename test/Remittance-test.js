@@ -3,22 +3,22 @@ web3.eth.getTransactionReceiptMined = require("./getTransactionReceiptMined.js")
 const expectedExceptionPromise = require('./expected_exception_testRPC_and_geth.js');
 
 contract('Remittance', (accounts) => {
-  const alice = accounts[0],
-        carol = accounts[1];
+  const owner = accounts[0],
+        exchange = accounts[1];
   let contract,
       expectedDeadline;
 
   beforeEach( () => {
-    return Remittance.new({from: alice})
+    return Remittance.new({from: owner})
       .then( (instance) => {
         contract = instance;
       });
   });
 
   it('should be owned by Alice', () => {
-    return contract.owner({from:alice})
+    return contract.owner({from:owner})
       .then( (owner) => {
-        assert.strictEqual(owner, alice, "Contract is not owned by Alice");
+        assert.strictEqual(owner, owner, "Contract is not owned by Alice");
       });
   });
 
@@ -31,10 +31,10 @@ contract('Remittance', (accounts) => {
     const HASHED_PASSWORD2 = web3.sha3(PASSWORD2, { encoding: 'hex' });
 
     it('it should create a Remittance record with the balance, deadline and exchange address', () => {
-      return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: alice, value:10})
+      return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: owner, value:10})
         .then( (txn) => {
           expectedDeadline = web3.eth.blockNumber + 10;
-          return contract.remitTransactions(carol, {from:alice});
+          return contract.remitTransactions(exchange, {from:owner});
         })
         .then( (remit1) => {
           assert.equal(remit1[0].toString(10), 10, "Remit Amount is incorrect");
@@ -45,21 +45,33 @@ contract('Remittance', (accounts) => {
     });
     it('only the contract owner can createRemittance()', () => {
       return expectedExceptionPromise(function () {
-        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: carol, value:10});
+        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: exchange, value:10});
           }, 3000000);
     });
     it('once a remittance is created for an address it cannot create another', () => {
-      return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: alice, value:10})
+      return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: owner, value:10})
         .then( (txn) => {
           return expectedExceptionPromise(function () {
-            return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, carol, 10, {from: carol, value:10});
+            return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: exchange, value:10});
               }, 3000000);
         });
     });
 
     describe('.retreiveFunds()', () => {
-      xit('it should not send the funds when one of the passwords is wrong', () => {});
-      xit('it should send the funds when both of the passwords are right', () => {});
+      it('it should not send the funds when one of the passwords is wrong', () => {return expectedExceptionPromise(function () {
+        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: owner, value:10})
+          .then( (txn) => {
+            return contract.sendRemittance(HASHED_PASSWORD1, HASHED_PASSWORD1, {from: exchange});
+              }, 3000000);
+          });
+      });
+      xit('it should send the funds when both of the passwords are right', () => {
+        const exchangeBalance = web3.eth.getBalance(exchange);
+        return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: owner, value:10})
+          .then( (txn) => {
+
+          });
+      });
     });
   });
 
