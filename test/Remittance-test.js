@@ -65,11 +65,15 @@ contract('Remittance', (accounts) => {
               }, 3000000);
           });
       });
-      xit('it should send the funds when both of the passwords are right', () => {
+      it('it should send the funds when both of the passwords are correct', () => {
         const exchangeBalance = web3.eth.getBalance(exchange);
         return contract.createRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, exchange, 10, {from: owner, value:10})
           .then( (txn) => {
-
+            return contract.sendRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, {from: exchange})
+              .then( (txn) => {
+                newBalance = web3.eth.getBalance(exchange);
+                assert.equal(exchangeBalance.plus(10), newBalance, "Exchange balance did not increase by 10");
+              })
           });
       });
     });
