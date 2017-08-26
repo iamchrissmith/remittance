@@ -3,10 +3,10 @@ web3.eth.getTransactionReceiptMined = require("./getTransactionReceiptMined.js")
 const expectedExceptionPromise = require('./expected_exception_testRPC_and_geth.js');
 
 contract('Remittance', (accounts) => {
-  const owner = accounts[0],
-        exchange = accounts[1];
-  let contract,
-      expectedDeadline;
+  const owner = accounts[0];
+  const exchange = accounts[1];
+  let contract;
+  let expectedDeadline;
 
   beforeEach( () => {
     return Remittance.new({from: owner})
@@ -22,8 +22,6 @@ contract('Remittance', (accounts) => {
       });
   });
 
-
-
   context('when Alice sends a Remittance with an amount, recipient and passwords', () => {
     const PASSWORD1 = web3.toHex('abc123');
     const HASHED_PASSWORD1 = web3.sha3(PASSWORD1, { encoding: 'hex' });
@@ -35,25 +33,26 @@ contract('Remittance', (accounts) => {
       return contract.createRemittance(expectedCombinedPassword, exchange, 10, {from: owner, value:10})
         .then( (txn) => {
           expectedDeadline = web3.eth.blockNumber + 10;
-          return contract.remitTransactions(exchange, {from:owner});
+          return contract.remitTransactions(expectedCombinedPassword, {from:owner});
         })
         .then( (remit1) => {
-          assert.equal(remit1[0].toString(10), 10, "Remit Amount is incorrect");
-          assert.equal(remit1[1], expectedCombinedPassword, "Password Hash is incorrect");
+          assert.equal(remit1[0], exchange, "Exchange is incorrect");
+          assert.equal(remit1[1].toString(10), 10, "Remit Amount is incorrect");
           assert.equal(remit1[2].toString(10), expectedDeadline, "Remit Deadline is incorrect");
         });
     });
+
     it('only the contract owner can createRemittance()', () => {
       return expectedExceptionPromise(function () {
         return contract.createRemittance(expectedCombinedPassword, exchange, 10, {from: exchange, value:10});
           }, 3000000);
     });
-    it('once a remittance is created for an address it cannot create another', () => {
+    it('once a remittance is created for a password it cannot create another', () => {
       return contract.createRemittance(expectedCombinedPassword, exchange, 10, {from: owner, value:10})
         .then( (txn) => {
           return expectedExceptionPromise(function () {
             return contract.createRemittance(expectedCombinedPassword, exchange, 10, {from: exchange, value:10});
-              }, 3000000);
+          }, 3000000);
         });
     });
 
@@ -66,16 +65,20 @@ contract('Remittance', (accounts) => {
           });
       });
       it('it should send the funds when both of the passwords are correct', () => {
-        const freshExchange = accounts[2];
-        const exchangeBalance = web3.eth.getBalance(freshExchange);
-        const amount = web3.toWei(1, 'ether'); //1000000000000000000
-        return contract.createRemittance(expectedCombinedPassword, freshExchange, 10, {from: owner, value:amount})
+        const exchangeBalance = web3.eth.getBalance(exchange);
+        const amount = 1;
+        const gasPrice = 1;
+        let transactionCost;
+        return contract.createRemittance(expectedCombinedPassword, exchange, 10, {from: owner, value:amount})
           .then( (txn) => {
-            return contract.sendRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, {from: freshExchange, gasPrice:1})
-              .then( (sendTxn) => {
-                newBalance = web3.eth.getBalance(freshExchange);
-                assert.equal(exchangeBalance.plus(amount).minus(sendTxn.receipt.gasUsed).toString(10), newBalance.toString(10), "Exchange balance did not increase by 10");
-              })
+            return contract.sendRemittance(HASHED_PASSWORD1, HASHED_PASSWORD2, {from: exchange, gasPrice: gasPrice});
+          })
+          .then( (sendTxn) => {
+            transactionCost = sendTxn.receipt.gasUsed * gasPrice;
+            return web3.eth.getBalance(exchange)
+          })
+          .then( (newBalance) => {
+            assert.equal(exchangeBalance.plus(amount).minus(transactionCost).toString(10), newBalance.toString(10), "Exchange balance did not increase by 10");
           });
       });
     });

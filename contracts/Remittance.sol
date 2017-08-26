@@ -2,14 +2,14 @@ pragma solidity ^0.4.6;
 
 contract Remittance {
   struct remitTransaction {
+    address exchange;
     uint amount;
-    bytes32 combinedPassword;
     uint deadline;
   }
 
   address public owner;
 
-  mapping(address => remitTransaction) public remitTransactions;
+  mapping(bytes32 => remitTransaction) public remitTransactions;
 
   function Remittance() {
     owner = msg.sender;
@@ -26,14 +26,16 @@ contract Remittance {
     payable
     returns (bool success)
   {
-    if(msg.value == 0) revert();
-    if(remitTransactions[exchange].amount != 0) revert();
+    require(msg.value > 0);
+    require(combinedPwHash != 0);
+    require(exchange != address(0));
+    require(remitTransactions[combinedPwHash].exchange == address(0));
 
     remitTransaction memory newRemit;
     newRemit.amount = msg.value;
-    newRemit.combinedPassword = combinedPwHash;
+    newRemit.exchange = exchange;
     newRemit.deadline = block.number + _deadline;
-    remitTransactions[exchange] = newRemit;
+    remitTransactions[combinedPwHash] = newRemit;
     return true;
   }
 
@@ -41,12 +43,16 @@ contract Remittance {
     public
     returns (bool success)
   {
-    if(remitTransactions[msg.sender].amount == 0) revert();
-    if(block.number > remitTransactions[msg.sender].deadline) revert();
-    if(remitTransactions[msg.sender].combinedPassword != keccak256(pwHash1, pwHash2)) revert();
+    require(pwHash1 != 0);
+    require(pwHash2 != 0);
 
-    uint toSend = remitTransactions[msg.sender].amount;
-    remitTransactions[msg.sender].amount = 0;
+    bytes32 combinedPassword = keccak256(pwHash1, pwHash2);
+    require(remitTransactions[combinedPassword].exchange == msg.sender);
+    require(remitTransactions[combinedPassword].amount != 0);
+    require(block.number < remitTransactions[combinedPassword].deadline);
+
+    uint toSend = remitTransactions[combinedPassword].amount;
+    remitTransactions[combinedPassword].amount = 0;
 
     msg.sender.transfer(toSend);
 
